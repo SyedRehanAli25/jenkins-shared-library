@@ -1,8 +1,14 @@
 package org.devopstitans
 
-class Utils {
-    static String shout(String message) {
-        return message.toUpperCase() + "!!!"
+class Utils implements Serializable {
+    def steps
+
+    Utils(steps) {
+        this.steps = steps
+    }
+
+    def printMessage(String msg) {
+        steps.echo "${msg}"
     }
 }
 
