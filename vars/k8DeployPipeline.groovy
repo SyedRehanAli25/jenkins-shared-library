@@ -23,7 +23,7 @@ def call(Map params = [:]) {
                         env.KEEP_APPROVAL_STAGE   = config.KEEP_APPROVAL_STAGE.toString()
                         env.DEPLOY_ENV            = config.ENVIRONMENT
 
-                        notifySlack(" ${config.ACTION_MESSAGE}", config.SLACK_WEBHOOK_URL)
+                        notifySlack("🚀 ${config.ACTION_MESSAGE}", config.SLACK_WEBHOOK_URL)
                     }
                 }
             }
@@ -33,14 +33,14 @@ def call(Map params = [:]) {
                     expression { return env.KEEP_APPROVAL_STAGE == 'true' }
                 }
                 steps {
-                    input message: " Do you approve deployment to ${env.DEPLOY_ENV}?"
+                    input message: "🛑 Do you approve deployment to ${env.DEPLOY_ENV}?"
                 }
             }
 
             stage('Deploy to Kubernetes') {
                 steps {
                     script {
-                        echo " Deploying Kubernetes manifests from ${env.CODE_BASE_PATH} to ${env.DEPLOY_ENV}..."
+                        echo "📦 Deploying Kubernetes manifests from ${env.CODE_BASE_PATH} to ${env.DEPLOY_ENV}..."
                         // Replace this with your actual deploy tool logic
                         deployTool(env.DEPLOY_ENV)
                     }
@@ -51,12 +51,12 @@ def call(Map params = [:]) {
         post {
             success {
                 script {
-                    notifySlack(" Deployment to *${env.DEPLOY_ENV}* succeeded", env.SLACK_WEBHOOK_URL)
+                    notifySlack("✅ Deployment to *${env.DEPLOY_ENV}* succeeded", env.SLACK_WEBHOOK_URL)
                 }
             }
             failure {
                 script {
-                    notifySlack(" Deployment to *${env.DEPLOY_ENV}* failed", env.SLACK_WEBHOOK_URL)
+                    notifySlack("❌ Deployment to *${env.DEPLOY_ENV}* failed", env.SLACK_WEBHOOK_URL)
                 }
             }
         }
