@@ -1,26 +1,34 @@
-// vars/k8DeployPipeline.groovy
+ // vars/k8DeployPipeline.groovy
 def call(Map params = [:]) {
     if (!params.configFilePath) {
-        error "k8DeployPipeline(configFilePath: 'resources/configs/prod-config.yaml')"
+        error " k8DeployPipeline(configFilePath: 'resources/configs/prod-config.yaml')"
     }
 
-    def config = readYaml file: params.configFilePath
+    def config
 
     pipeline {
         agent any
 
-        environment {
-            ENVIRONMENT         = "${config.ENVIRONMENT}"
-            SLACK_WEBHOOK_URL   = "${config.SLACK_WEBHOOK_URL}"
-            ACTION_MESSAGE      = "${config.ACTION_MESSAGE}"
-            PLAYBOOK_PATH       = "${config.PLAYBOOK_PATH}"
-        }
-
         stages {
+            stage("Load Config") {
+                steps {
+                    script {
+                        node {
+                            config = readYaml file: params.configFilePath
+                        }
+
+                        env.ENVIRONMENT       = config.ENVIRONMENT
+                        env.SLACK_WEBHOOK_URL = config.SLACK_WEBHOOK_URL
+                        env.ACTION_MESSAGE    = config.ACTION_MESSAGE
+                        env.PLAYBOOK_PATH     = config.PLAYBOOK_PATH
+                    }
+                }
+            }
+
             stage("Notify Start") {
                 steps {
                     script {
-                        notifySlack(" Starting: ${ACTION_MESSAGE}", SLACK_WEBHOOK_URL)
+                        notifySlack(" Starting: ${env.ACTION_MESSAGE}", env.SLACK_WEBHOOK_URL)
                     }
                 }
             }
@@ -28,7 +36,7 @@ def call(Map params = [:]) {
             stage("Run Ansible Playbook") {
                 steps {
                     script {
-                        sh "ansible-playbook ${PLAYBOOK_PATH} --extra-vars \"env=${ENVIRONMENT}\""
+                        sh "ansible-playbook ${env.PLAYBOOK_PATH} --extra-vars \"env=${env.ENVIRONMENT}\""
                     }
                 }
             }
@@ -36,7 +44,7 @@ def call(Map params = [:]) {
             stage("Notify Success") {
                 steps {
                     script {
-                        notifySlack("Success: ${ACTION_MESSAGE}", SLACK_WEBHOOK_URL)
+                        notifySlack("Success: ${env.ACTION_MESSAGE}", env.SLACK_WEBHOOK_URL)
                     }
                 }
             }
@@ -45,7 +53,7 @@ def call(Map params = [:]) {
         post {
             failure {
                 script {
-                    notifySlack(" Failed: ${ACTION_MESSAGE}", SLACK_WEBHOOK_URL)
+                    notifySlack("Failed: ${env.ACTION_MESSAGE}", env.SLACK_WEBHOOK_URL)
                 }
             }
         }
