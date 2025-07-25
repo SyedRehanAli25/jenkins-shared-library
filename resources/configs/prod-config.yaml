@@ -1,6 +1,7 @@
 SLACK_CHANNEL_NAME: "rehan.ali9325"
-SLACK_WEBHOOK_URL: "https://hooks.slack.com/services/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"
 ENVIRONMENT: "prod"
-ACTION_MESSAGE: "Deploying to production via Ansible"
-PLAYBOOK_PATH: "playbooks/deploy-k8s.yaml"
+CODE_BASE_PATH: "env/prod"
+ACTION_MESSAGE: "Deploying Kubernetes to *prod* environment"
+SLACK_WEBHOOK_URL: "https://hooks.slack.com/services/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"
+KEEP_APPROVAL_STAGE: true
 
