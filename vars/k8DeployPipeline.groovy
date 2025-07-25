@@ -40,7 +40,7 @@ def call(Map params = [:]) {
             stage('Deploy to Kubernetes') {
                 steps {
                     script {
-                        echo "Deploying Kubernetes manifests from ${env.CODE_BASE_PATH} to ${env.DEPLOY_ENV}..."
+                        echo " Deploying Kubernetes manifests from ${env.CODE_BASE_PATH} to ${env.DEPLOY_ENV}..."
                         // Replace this with your actual deploy tool logic
                         deployTool(env.DEPLOY_ENV)
                     }
