@@ -1,56 +1,45 @@
-def call(String configFile = 'configs/prod-config.yaml') {
-    def config = readYaml text: libraryResource(configFile)
-
+def call(Map params = [:]) {
     pipeline {
         agent any
 
-        environment {
-            SLACK_CHANNEL = "${config.SLACK_CHANNEL_NAME}"
-            ENV = "${config.ENVIRONMENT}"
-            BASE_PATH = "${config.CODE_BASE_PATH}"
-            MSG = "${config.ACTION_MESSAGE}"
-            KEEP_APPROVAL = "${config.KEEP_APPROVAL_STAGE}"
+        parameters {
+            choice(name: 'ENVIRONMENT', choices: ['dev', 'qa', 'prod'], description: 'Select environment to deploy')
         }
 
         stages {
-            stage('Clone') {
-                steps {
-                    echo "Cloning code from ${BASE_PATH}"
-                    checkout scm
-                }
-            }
-
-            stage('Start Notification') {
+            stage('Load Config') {
                 steps {
                     script {
-                        notifySlack(" ${MSG}", SLACK_CHANNEL)
+                        def configPath = "resources/configs/${params.ENVIRONMENT}-config.yaml"
+                        def config = readYaml file: configPath
+
+                        // Load into env
+                        env.SLACK_WEBHOOK_URL     = config.SLACK_WEBHOOK_URL
+                        env.SLACK_CHANNEL_NAME    = config.SLACK_CHANNEL_NAME
+                        env.ACTION_MESSAGE        = config.ACTION_MESSAGE
+                        env.CODE_BASE_PATH        = config.CODE_BASE_PATH
+                        env.KEEP_APPROVAL_STAGE   = config.KEEP_APPROVAL_STAGE.toString()
+                        env.DEPLOY_ENV            = config.ENVIRONMENT
+
+                        notifySlack(" ${config.ACTION_MESSAGE}", config.SLACK_WEBHOOK_URL)
                     }
                 }
             }
 
-            stage('User Approval') {
+            stage('Approval') {
                 when {
-                    expression { return KEEP_APPROVAL.toBoolean() }
+                    expression { return env.KEEP_APPROVAL_STAGE == 'true' }
                 }
                 steps {
-                    timeout(time: 5, unit: 'MINUTES') {
-                        input message: "Do you approve deployment to ${ENV}?"
-                    }
+                    input message: "Do you approve deployment to ${env.DEPLOY_ENV}?"
                 }
             }
 
-            stage('Run Ansible Playbook') {
+            stage('Deploy') {
                 steps {
-                    echo "Triggering Ansible deployment for ${ENV}"
-                    deployTool(ENV)
-                }
-            }
-
-            stage('End Notification') {
-                steps {
-                    script {
-                        notifySlack("Deployment to ${ENV} finished successfully.", SLACK_CHANNEL)
-                    }
+                    echo " Deploying Kubernetes manifests from ${env.CODE_BASE_PATH} to ${env.DEPLOY_ENV}..."
+                  
+                    deployTool(env.DEPLOY_ENV)
                 }
             }
         }
@@ -58,12 +47,12 @@ def call(String configFile = 'configs/prod-config.yaml') {
         post {
             success {
                 script {
-                    notifySlack(" Pipeline ran successfully for ${ENV}.", SLACK_CHANNEL)
+                    notifySlack(" Deployment to *${env.DEPLOY_ENV}* succeeded", env.SLACK_WEBHOOK_URL)
                 }
             }
             failure {
                 script {
-                    notifySlack(" Deployment to ${ENV} failed.", SLACK_CHANNEL)
+                    notifySlack(" Deployment to *${env.DEPLOY_ENV}* failed", env.SLACK_WEBHOOK_URL)
                 }
             }
         }
