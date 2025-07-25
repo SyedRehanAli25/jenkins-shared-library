@@ -1,4 +1,4 @@
 @Library('jenkins-shared-library') _
 
-k8DeployPipeline('configs/prod-config.yaml')
+k8DeployPipeline("resources/configs/${params.ENVIRONMENT}-config.yaml")
 
