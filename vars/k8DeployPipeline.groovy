@@ -63,7 +63,7 @@ def call(String configFile = 'configs/prod-config.yaml') {
             }
             failure {
                 script {
-                    notifySlack("Deployment to ${ENV} failed.", SLACK_CHANNEL)
+                    notifySlack(" Deployment to ${ENV} failed.", SLACK_CHANNEL)
                 }
             }
         }
