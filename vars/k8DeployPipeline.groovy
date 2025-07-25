@@ -1,3 +1,5 @@
+// vars/k8DeployPipeline.groovy
+
 def call(Map params = [:]) {
     pipeline {
         agent any
@@ -13,7 +15,7 @@ def call(Map params = [:]) {
                         def configPath = "resources/configs/${params.ENVIRONMENT}-config.yaml"
                         def config = readYaml file: configPath
 
-                        // Load into env
+                        // Load config values into environment variables
                         env.SLACK_WEBHOOK_URL     = config.SLACK_WEBHOOK_URL
                         env.SLACK_CHANNEL_NAME    = config.SLACK_CHANNEL_NAME
                         env.ACTION_MESSAGE        = config.ACTION_MESSAGE
@@ -31,15 +33,17 @@ def call(Map params = [:]) {
                     expression { return env.KEEP_APPROVAL_STAGE == 'true' }
                 }
                 steps {
-                    input message: "Do you approve deployment to ${env.DEPLOY_ENV}?"
+                    input message: " Do you approve deployment to ${env.DEPLOY_ENV}?"
                 }
             }
 
-            stage('Deploy') {
+            stage('Deploy to Kubernetes') {
                 steps {
-                    echo " Deploying Kubernetes manifests from ${env.CODE_BASE_PATH} to ${env.DEPLOY_ENV}..."
-                  
-                    deployTool(env.DEPLOY_ENV)
+                    script {
+                        echo " Deploying Kubernetes manifests from ${env.CODE_BASE_PATH} to ${env.DEPLOY_ENV}..."
+                        // Replace this with your actual deploy tool logic
+                        deployTool(env.DEPLOY_ENV)
+                    }
                 }
             }
         }
