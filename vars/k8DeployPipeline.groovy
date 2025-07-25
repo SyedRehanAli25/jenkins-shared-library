@@ -51,7 +51,7 @@ def call(Map params = [:]) {
         post {
             success {
                 script {
-                    notifySlack("Deployment to *${env.DEPLOY_ENV}* succeeded", env.SLACK_WEBHOOK_URL)
+                    notifySlack(" Deployment to *${env.DEPLOY_ENV}* succeeded", env.SLACK_WEBHOOK_URL)
                 }
             }
             failure {
