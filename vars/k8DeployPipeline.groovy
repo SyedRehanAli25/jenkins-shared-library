@@ -20,6 +20,14 @@ def call(String configFile = 'configs/prod-config.yaml') {
                 }
             }
 
+            stage('Start Notification') {
+                steps {
+                    script {
+                        notifySlack(" ${MSG}", SLACK_CHANNEL)
+                    }
+                }
+            }
+
             stage('User Approval') {
                 when {
                     expression { return KEEP_APPROVAL.toBoolean() }
@@ -34,19 +42,30 @@ def call(String configFile = 'configs/prod-config.yaml') {
             stage('Run Ansible Playbook') {
                 steps {
                     echo "Triggering Ansible deployment for ${ENV}"
-                    deployTool(ENV)  //  Calls vars/deployTool.groovy
+                    deployTool(ENV)
+                }
+            }
+
+            stage('End Notification') {
+                steps {
+                    script {
+                        notifySlack("Deployment to ${ENV} finished successfully.", SLACK_CHANNEL)
+                    }
                 }
             }
         }
 
         post {
             success {
-                echo " Pipeline completed successfully for ${ENV}"
+                script {
+                    notifySlack(" Pipeline ran successfully for ${ENV}.", SLACK_CHANNEL)
+                }
             }
             failure {
-                echo " Pipeline failed during ${ENV} deployment"
+                script {
+                    notifySlack("Deployment to ${ENV} failed.", SLACK_CHANNEL)
+                }
             }
         }
     }
 }
-
