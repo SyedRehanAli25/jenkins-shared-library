@@ -1,0 +1,6 @@
+- name: Dummy Playbook for Jenkins Integration
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: Ping Test
+      ping:
