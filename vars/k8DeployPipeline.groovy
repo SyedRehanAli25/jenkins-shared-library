@@ -1,5 +1,3 @@
-// vars/k8DeployPipeline.groovy
-
 def call(Map params = [:]) {
     pipeline {
         agent any
@@ -12,10 +10,16 @@ def call(Map params = [:]) {
             stage('Load Config') {
                 steps {
                     script {
-                        def configPath = "resources/configs/${params.ENVIRONMENT}-config.yaml"
+                        def envName = params.ENVIRONMENT ?: params.env ?: ENVIRONMENT
+                        if (!envName) {
+                            error "❌ ENVIRONMENT not provided. Please pass it as a parameter or call like k8DeployPipeline(env: 'dev')"
+                        }
+
+                        def configPath = "resources/configs/${envName}-config.yaml"
+                        echo "🔧 Loading config from: ${configPath}"
                         def config = readYaml file: configPath
 
-                        // Load config values into environment variables
+                        // Set environment variables
                         env.SLACK_WEBHOOK_URL     = config.SLACK_WEBHOOK_URL
                         env.SLACK_CHANNEL_NAME    = config.SLACK_CHANNEL_NAME
                         env.ACTION_MESSAGE        = config.ACTION_MESSAGE
@@ -23,7 +27,7 @@ def call(Map params = [:]) {
                         env.KEEP_APPROVAL_STAGE   = config.KEEP_APPROVAL_STAGE.toString()
                         env.DEPLOY_ENV            = config.ENVIRONMENT
 
-                        notifySlack(" ${config.ACTION_MESSAGE}", config.SLACK_WEBHOOK_URL)
+                        notifySlack("🚀 ${config.ACTION_MESSAGE}", config.SLACK_WEBHOOK_URL)
                     }
                 }
             }
@@ -33,16 +37,18 @@ def call(Map params = [:]) {
                     expression { return env.KEEP_APPROVAL_STAGE == 'true' }
                 }
                 steps {
-                    input message: " Do you approve deployment to ${env.DEPLOY_ENV}?"
+                    input message: "🟢 Approve deployment to ${env.DEPLOY_ENV}?"
                 }
             }
 
             stage('Deploy to Kubernetes') {
                 steps {
                     script {
-                        echo "Deploying Kubernetes manifests from ${env.CODE_BASE_PATH} to ${env.DEPLOY_ENV}..."
-                        // Replace this with your actual deploy tool logic
-                        deployTool(env.DEPLOY_ENV)
+                        echo "🚀 Deploying manifests from ${env.CODE_BASE_PATH} to ${env.DEPLOY_ENV} environment"
+                        sh """
+                        kubectl apply -f ${env.CODE_BASE_PATH}/ --namespace=${env.DEPLOY_ENV}
+                        kubectl rollout status deployment/my-app -n ${env.DEPLOY_ENV}
+                        """
                     }
                 }
             }
@@ -51,12 +57,12 @@ def call(Map params = [:]) {
         post {
             success {
                 script {
-                    notifySlack(" Deployment to *${env.DEPLOY_ENV}* succeeded", env.SLACK_WEBHOOK_URL)
+                    notifySlack("✅ Deployment to *${env.DEPLOY_ENV}* succeeded", env.SLACK_WEBHOOK_URL)
                 }
             }
             failure {
                 script {
-                    notifySlack("Deployment to *${env.DEPLOY_ENV}* failed", env.SLACK_WEBHOOK_URL)
+                    notifySlack("❌ Deployment to *${env.DEPLOY_ENV}* failed", env.SLACK_WEBHOOK_URL)
                 }
             }
         }
