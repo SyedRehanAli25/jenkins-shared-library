@@ -1,6 +1,8 @@
 SLACK_CHANNEL_NAME: "build-status"
+SLACK_WEBHOOK_URL: "https://hooks.slack.com/services/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"
 ENVIRONMENT: "prod"
 CODE_BASE_PATH: "env/prod"
-ACTION_MESSAGE: " Deploying Kubernetes to *prod* environment"
+ACTION_MESSAGE: "Deploying Kubernetes to *prod* environment"
 KEEP_APPROVAL_STAGE: true
+
 
