@@ -1,39 +1,51 @@
+// vars/k8DeployPipeline.groovy
 def call(Map params = [:]) {
+    if (!params.configFilePath) {
+        error "k8DeployPipeline(configFilePath: 'resources/configs/prod-config.yaml')"
+    }
+
+    def config = readYaml file: params.configFilePath
+
     pipeline {
         agent any
 
         environment {
-            CONFIG_FILE = "resources/configs/prod-config.yaml"
+            ENVIRONMENT         = "${config.ENVIRONMENT}"
+            SLACK_WEBHOOK_URL   = "${config.SLACK_WEBHOOK_URL}"
+            ACTION_MESSAGE      = "${config.ACTION_MESSAGE}"
+            PLAYBOOK_PATH       = "${config.PLAYBOOK_PATH}"
         }
 
         stages {
-            stage('Load Config') {
+            stage("Notify Start") {
                 steps {
                     script {
-                        config = readYaml file: CONFIG_FILE
-                        notifySlack(" ${config.ACTION_MESSAGE}", config.SLACK_WEBHOOK_URL)
+                        notifySlack(" Starting: ${ACTION_MESSAGE}", SLACK_WEBHOOK_URL)
                     }
                 }
             }
 
-            stage('Run Playbook') {
+            stage("Run Ansible Playbook") {
                 steps {
                     script {
-                        sh "ansible-playbook ${config.CODE_BASE_PATH}/k8s-deploy.yml"
+                        sh "ansible-playbook ${PLAYBOOK_PATH} --extra-vars \"env=${ENVIRONMENT}\""
+                    }
+                }
+            }
+
+            stage("Notify Success") {
+                steps {
+                    script {
+                        notifySlack("Success: ${ACTION_MESSAGE}", SLACK_WEBHOOK_URL)
                     }
                 }
             }
         }
 
         post {
-            success {
-                script {
-                    notifySlack(" ${config.ACTION_MESSAGE} completed successfully", config.SLACK_WEBHOOK_URL)
-                }
-            }
             failure {
                 script {
-                    notifySlack(" ${config.ACTION_MESSAGE} failed", config.SLACK_WEBHOOK_URL)
+                    notifySlack(" Failed: ${ACTION_MESSAGE}", SLACK_WEBHOOK_URL)
                 }
             }
         }
